@@ -16,9 +16,3 @@ workflows:
           flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
-    signing:
-      certificates:
-        - certificate_name: "Michele"
-          certificate_password: $CERTIFICATE_PASSWORD
-      provisioning_profiles:
-        - "Michele"
