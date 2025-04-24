@@ -5,8 +5,6 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-      vars:
-        CERTIFICATE_PASSWORD: "amelie.2024" # o lascia vuoto se il .p12 non ha password
     scripts:
       - name: Install dependencies
         script: |
