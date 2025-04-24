@@ -6,30 +6,19 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        CERTIFICATE_PASSWORD: "amelie.2024" # Se il .p12 ha una password, altrimenti lascia ""
+        CERTIFICATE_PASSWORD: "amelie.2024" # o lascia vuoto se il .p12 non ha password
     scripts:
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Set up code signing
-        script: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $FCI_PROV_PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          security create-keychain -p "" build.keychain
-          security import $FCI_CERT_PATH -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security list-keychains -s build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security set-keychain-settings
       - name: Build iOS
         script: |
           flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
-    publishing:
-      email:
-        recipients:
-          - michelepingitore@icloud.com
-        notify:
-          success: true
-          failure: true
+    signing:
+      certificates:
+        - certificate_name: "Michele"
+          certificate_password: $CERTIFICATE_PASSWORD
+      provisioning_profiles:
+        - "Michele"
