@@ -29,7 +29,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - tuo@email.it
+          - michelepingitore@icloud.com
         notify:
           success: true
           failure: true
