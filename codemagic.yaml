@@ -6,7 +6,7 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        CERTIFICATE_PASSWORD: amelie.2024 # Se il .p12 ha password, altrimenti lascialo vuoto
+        CERTIFICATE_PASSWORD: "amelie.2024" # solo se il .p12 ha una password
     scripts:
       - name: Install dependencies
         script: |
@@ -15,10 +15,4 @@ workflows:
         script: |
           flutter build ipa --release
     artifacts:
-      - build/ios/ipa/*.ipa
-    code_signing:
-      certificates:
-        - certificate_name: "Michele"
-          certificate_password: $CERTIFICATE_PASSWORD
-      provisioning_profiles:
-        - "Michele"
+      - build/ios/ipa/*.ipa 
