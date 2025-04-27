@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'chat_service.dart';
-import 'image_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -25,22 +26,25 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add({'content': text, 'isUser': true});
     });
+    _scrollToBottom();
   }
 
   void _addBotMessage(String text) {
     setState(() {
       _messages.add({'content': text, 'isUser': false});
     });
+    _scrollToBottom();
   }
 
-  void _addImageMessage(String imageUrl) {
+  void _addImageMessage(File imageFile) {
     setState(() {
       _messages.add({
-        'content': imageUrl,
-        'isUser': false,
+        'content': imageFile,
+        'isUser': true,
         'isImage': true,
       });
     });
+    _scrollToBottom();
   }
 
   Future<void> _sendMessage() async {
@@ -51,27 +55,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
     setState(() => _isTyping = true);
 
-    await Future.delayed(const Duration(milliseconds: 100));
-    _scrollToBottom();
-
     try {
-      if (input.toLowerCase().contains('genera') ||
-          input.toLowerCase().contains('immagine')) {
-        final imageUrl = await ImageService.generateImage(input);
-        if (imageUrl != null && imageUrl.isNotEmpty) {
-          _addImageMessage(imageUrl);
-        } else {
-          _addBotMessage("Mi dispiace, non sono riuscito a generare l'immagine.");
-        }
-      } else {
-        final botReply = await ChatService.getChatResponse(input);
-        _addBotMessage(botReply);
-      }
+      final botReply = await ChatService.sendMessage(input);
+      _addBotMessage(botReply);
     } catch (e) {
-      _addBotMessage("Errore: $e");
+      _addBotMessage("Errore durante la comunicazione.");
     } finally {
       setState(() => _isTyping = false);
-      _scrollToBottom();
     }
   }
 
@@ -87,9 +77,79 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      _addImageMessage(file);
+    }
+  }
+
+  void _startNewChat() {
+    setState(() {
+      _messages.clear();
+      _addBotMessage("Benvenuto in Pingipool, come posso aiutarti?");
+    });
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        backgroundColor: const Color(0xFF0D0D2B),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Color(0xFF0A0F1C),
+              ),
+              child: Text(
+                'Pingipool Menu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat, color: Colors.cyanAccent),
+              title: const Text('Nuova Chat', style: TextStyle(color: Colors.white)),
+              onTap: _startNewChat,
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_back, color: Colors.cyanAccent),
+              title: const Text('Indietro', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 20),
+            const Center(
+              child: Text(
+                'Versione 1.0',
+                style: TextStyle(color: Colors.white38),
+              ),
+            ),
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.cyanAccent),
+        centerTitle: true,
+        title: const Text(
+          'Pingipool 1.0',
+          style: TextStyle(
+            color: Colors.cyanAccent,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+      ),
       backgroundColor: Colors.black,
       body: Stack(
         children: [
@@ -103,17 +163,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'Pingipool 1.0',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
@@ -122,10 +171,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     final message = _messages[index];
                     final isUser = message['isUser'] == true;
                     final isImage = message['isImage'] == true;
-
-                    final backgroundColor = isUser
-                        ? const Color.fromRGBO(255, 255, 255, 0.2)
-                        : const Color.fromRGBO(0, 0, 0, 0.4);
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -146,11 +191,13 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: backgroundColor,
+                                color: isUser
+                                    ? const Color.fromARGB(255, 63, 61, 61)
+                                    : const Color.fromARGB(255, 36, 91, 82),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: isImage
-                                  ? Image.network(message['content'])
+                                  ? Image.file(message['content'])
                                   : Text(
                                       message['content'],
                                       style: const TextStyle(color: Colors.white),
@@ -175,25 +222,28 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Row(
                   children: [
+                    IconButton(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.add, color: Colors.cyanAccent),
+                    ),
                     Expanded(
                       child: TextField(
                         controller: _controller,
                         style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Scrivi un messaggio...",
-                          hintStyle: const TextStyle(color: Colors.white54),
+                          hintStyle: TextStyle(color: Colors.white54),
                           filled: true,
                           fillColor: Colors.white12,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         ),
                         onSubmitted: (_) => _sendMessage(),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     IconButton(
                       onPressed: _sendMessage,
                       icon: const Icon(Icons.send, color: Colors.cyanAccent),

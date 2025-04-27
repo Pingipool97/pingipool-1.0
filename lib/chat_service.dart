@@ -2,24 +2,23 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ChatService {
-  static const String backendUrl = 'https://pingipool-backend.onrender.com/chat'; // oppure localhost:10000 per test locali
-
-  static Future<String> getChatResponse(String userMessage) async {
+  static Future<String> sendMessage(String prompt) async {
     try {
+      final url = Uri.parse('https://pingipool-backend.onrender.com/chat');
       final response = await http.post(
-        Uri.parse(backendUrl),
+        url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': userMessage}),
+        body: jsonEncode({'message': prompt}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['reply'] ?? 'Risposta non disponibile.';
+        return data['reply'] ?? 'Nessuna risposta ricevuta.';
       } else {
-        return 'Errore: ${response.statusCode}';
+        return 'Errore durante la comunicazione.';
       }
     } catch (e) {
-      return 'Errore di connessione: $e';
+      return 'Errore durante la comunicazione.';
     }
   }
 }
