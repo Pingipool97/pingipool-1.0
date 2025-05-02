@@ -55,9 +55,53 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
     setState(() => _isTyping = true);
 
+    final lowerInput = input.toLowerCase();
+
     try {
-      final botReply = await ChatService.sendMessage(input);
-      _addBotMessage(botReply);
+      if (lowerInput.contains("foto") ||
+          lowerInput.contains("immagine reale") ||
+          lowerInput.contains("immagine vera") ||
+          lowerInput.contains("mostrami una foto") ||
+          lowerInput.contains("mostra una foto") ||
+          lowerInput.contains("mostrami un'immagine reale") ||
+          lowerInput.contains("mostra un'immagine reale")) {
+        debugPrint("🔎 CERCO IMMAGINE REALE");
+        final imageUrl = await ChatService.fetchRealImage(input);
+
+        if (imageUrl != null) {
+          setState(() {
+            _messages.add({
+              'content': imageUrl,
+              'isUser': false,
+              'isImageUrl': true,
+            });
+          });
+        } else {
+          _addBotMessage("Mi dispiace, non ho trovato nessuna immagine reale.");
+        }
+      } else if (lowerInput.contains("disegna") ||
+          lowerInput.contains("immagine") ||
+          lowerInput.contains("genera un'immagine") ||
+          lowerInput.contains("mostra un'immagine") ||
+          lowerInput.contains("crea un'immagine")) {
+        debugPrint("🎨 GENERO IMMAGINE AI");
+        final imageUrl = await ChatService.generateImage(input);
+
+        if (imageUrl != null) {
+          setState(() {
+            _messages.add({
+              'content': imageUrl,
+              'isUser': false,
+              'isImageUrl': true,
+            });
+          });
+        } else {
+          _addBotMessage("Mi dispiace, non sono riuscito a generare l'immagine.");
+        }
+      } else {
+        final botReply = await ChatService.sendMessage(input);
+        _addBotMessage(botReply);
+      }
     } catch (e) {
       _addBotMessage("Errore durante la comunicazione.");
     } finally {
@@ -171,6 +215,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     final message = _messages[index];
                     final isUser = message['isUser'] == true;
                     final isImage = message['isImage'] == true;
+                    final isImageUrl = message['isImageUrl'] == true;
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -198,10 +243,12 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                               child: isImage
                                   ? Image.file(message['content'])
-                                  : Text(
-                                      message['content'],
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
+                                  : isImageUrl
+                                      ? Image.network(message['content'])
+                                      : Text(
+                                          message['content'],
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
                             ),
                           ),
                         ],
